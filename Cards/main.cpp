@@ -246,8 +246,8 @@ int main(int argc, char* args[])
 		SDL_Surface* icon = IMG_Load((appDir + WINDOW_ICON).data());
 		if (icon)
 			SDL_SetWindowIcon(gWindow, icon);
-		SDL_SetWindowOpacity(gWindow, WINDOW_OPACITY);
 		
+		SDL_SetWindowOpacity(gWindow, WINDOW_OPACITY);
 		renderer = SDL_CreateRenderer(gWindow, -1, SDL_RENDERER_ACCELERATED);
 
 		SDL_Event e;
