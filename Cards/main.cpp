@@ -24,6 +24,108 @@ void close()
 	SDL_Quit();
 }
 
+PBITMAPINFO CreateBitmapInfoStruct(HBITMAP hBmp)
+{
+	BITMAP bmp{};
+	PBITMAPINFO pbmi;
+	WORD    cClrBits = 32;
+
+	if (!GetObject(hBmp, sizeof(BITMAP), (LPSTR)&bmp))
+		return NULL;
+
+	pbmi = (PBITMAPINFO)malloc(sizeof(BITMAPINFOHEADER));
+	if (!pbmi)
+		return NULL;
+
+	pbmi->bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+	pbmi->bmiHeader.biWidth = bmp.bmWidth;
+	pbmi->bmiHeader.biHeight = bmp.bmHeight;
+	pbmi->bmiHeader.biPlanes = bmp.bmPlanes;
+	pbmi->bmiHeader.biBitCount = bmp.bmBitsPixel;
+	if (cClrBits < 24)
+		pbmi->bmiHeader.biClrUsed = (1 << cClrBits);
+
+	pbmi->bmiHeader.biCompression = BI_RGB;
+
+	pbmi->bmiHeader.biSizeImage = ((pbmi->bmiHeader.biWidth * cClrBits + 31) & ~31) / 8 * pbmi->bmiHeader.biHeight;
+	pbmi->bmiHeader.biClrImportant = 0;
+	return pbmi;
+}
+
+void CreateBMPFile(PBITMAPINFO pbi, HBITMAP hBMP, string path)
+{
+	if (!pbi)
+		return;
+
+	BITMAPFILEHEADER hdr{};
+	PBITMAPINFOHEADER pbih;
+	LPBYTE lpBits;
+
+	pbih = (PBITMAPINFOHEADER)pbi;
+	lpBits = (LPBYTE)malloc(pbih->biSizeImage);
+	if (!lpBits)
+		return;
+
+	HDC hDC = CreateDC(L"DISPLAY", NULL, NULL, NULL);
+	if (!hDC)
+		return;
+
+	if (!GetDIBits(hDC, hBMP, 0, (WORD)pbih->biHeight, lpBits, pbi, DIB_RGB_COLORS))
+		return;
+
+	hdr.bfType = 0x4d42;        // 0x42 = "B" 0x4d = "M"  
+	hdr.bfSize = (DWORD)(sizeof(BITMAPFILEHEADER) +
+		pbih->biSize + pbih->biClrUsed
+		* sizeof(RGBQUAD) + pbih->biSizeImage);
+	hdr.bfReserved1 = 0;
+	hdr.bfReserved2 = 0;
+
+	hdr.bfOffBits = (DWORD)sizeof(BITMAPFILEHEADER) +
+		pbih->biSize + pbih->biClrUsed
+		* sizeof(RGBQUAD);
+
+	DWORD total = sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER) + pbih->biClrUsed * sizeof(RGBQUAD) + pbih->biSizeImage;
+	BYTE* pbResult = (BYTE*)malloc(total);
+	if (!pbResult)
+		return;
+
+	memcpy(pbResult, &hdr, sizeof(BITMAPFILEHEADER));
+	memcpy(pbResult + sizeof(BITMAPFILEHEADER), pbih, sizeof(BITMAPINFOHEADER) + pbih->biClrUsed * sizeof(RGBQUAD));
+	memcpy(pbResult + sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER) + pbih->biClrUsed * sizeof(RGBQUAD), lpBits, pbih->biSizeImage);
+
+	FILE* file = fopen(path.data(), "w+");
+	fwrite(pbResult, 1, total, file);
+	fclose(file);
+
+	free(pbResult);
+	free(pbi);
+	free(lpBits);
+}
+
+void copyAsFile(HBITMAP hBitmap)
+{
+	string path = filesystem::temp_directory_path().string() + "/Screenshot.bmp";
+
+	CreateBMPFile(CreateBitmapInfoStruct(hBitmap), hBitmap, path);
+	
+	int size = sizeof(DROPFILES) + ((lstrlenA(path.data()) + 2));
+	HGLOBAL hGlobal = GlobalAlloc(GMEM_MOVEABLE, size);
+	if (!hGlobal)
+		return;
+
+	DROPFILES* df = (DROPFILES*)GlobalLock(hGlobal);
+	if (!df)
+		return;
+
+	ZeroMemory(df, size);
+	df->pFiles = sizeof(DROPFILES);
+	df->fWide = FALSE;
+	LPSTR ptr = (LPSTR)(df + 1);
+	lstrcpyA(ptr, path.data());
+	GlobalUnlock(hGlobal);
+	SetClipboardData(CF_HDROP, hGlobal);
+}
+
 void copyToClipboard()
 {
 	HDC hDC = GetDC(NULL);
@@ -48,6 +150,9 @@ void copyToClipboard()
 	OpenClipboard(NULL);
 	EmptyClipboard();
 	SetClipboardData(CF_BITMAP, bm);
+
+	copyAsFile(bm);
+
 	CloseClipboard();
 
 	DeleteObject(oldbm);
@@ -66,7 +171,6 @@ void handleEvent(SDL_Event* e)
 
 	if (e->type == SDL_MOUSEMOTION)
 	{
-		SDL_FillRect(gScreenSurface, NULL, SDL_MapRGB(gScreenSurface->format, 0, 0, 0));
 		int x, y;
 		Uint32 state = SDL_GetMouseState(&x, &y);
 		if (state & SDL_BUTTON_LMASK)
@@ -110,10 +214,10 @@ void handleEvent(SDL_Event* e)
 
 				SDL_SetRenderDrawColor(renderer, BORDER_COLOR);
 				SDL_RenderFillRect(renderer, &rect);
-				SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+				SDL_SetRenderDrawColor(renderer, 255, 255, 255, 0);
 				SDL_RenderFillRect(renderer, &newRect);
 				SDL_RenderPresent(renderer);
-				SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+				SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
 			}
 		}
 	}
@@ -128,11 +232,22 @@ void handleEvent(SDL_Event* e)
 		quit = true;
 }
 
+string getAppDir(char* arg)
+{
+	return filesystem::path(arg).parent_path().string();
+}
+
 int main(int argc, char* args[])
 {
 	if (init())
 	{
-		SDL_SetWindowOpacity(gWindow, 0.3);
+		appDir = getAppDir(args[0]);
+		
+		SDL_Surface* icon = IMG_Load((appDir + WINDOW_ICON).data());
+		if (icon)
+			SDL_SetWindowIcon(gWindow, icon);
+		SDL_SetWindowOpacity(gWindow, WINDOW_OPACITY);
+		
 		renderer = SDL_CreateRenderer(gWindow, -1, SDL_RENDERER_ACCELERATED);
 
 		SDL_Event e;
