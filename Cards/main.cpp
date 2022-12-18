@@ -220,8 +220,14 @@ void drawRectangle()
 	SDL_SetRenderDrawColor(renderer, 255, 255, 255, 0);
 	SDL_RenderFillRect(renderer, &newRect);
 	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
-	
+
+	SDL_SetRenderDrawColor(renderer, SELECTION_COLOR);
+	for (auto const& p : pixels)
+		if (SDL_PointInRect(&p, &newRect))
+			SDL_RenderDrawPoint(renderer, p.x, p.y);
+
 	SDL_RenderPresent(renderer);
+	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
 }
 
 void handleEvent(SDL_Event* e)
@@ -237,6 +243,7 @@ void handleEvent(SDL_Event* e)
 	
 	int x, y;
 	Uint32 state = SDL_GetMouseState(&x, &y);
+	SDL_Point p(x, y);
 	setCursor(x, y);
 
 	if (e->type == SDL_MOUSEBUTTONUP)
@@ -244,6 +251,9 @@ void handleEvent(SDL_Event* e)
 		initX = 0;
 		initY = 0;
 	}
+
+	if (e->type == SDL_MOUSEBUTTONDOWN && !SDL_PointInRect(&p, &rect))
+		pixels.clear();
 
 	if (e->type == SDL_MOUSEMOTION)
 	{
@@ -255,7 +265,6 @@ void handleEvent(SDL_Event* e)
 				initY = y;
 			}
 
-			SDL_Point p(x, y);
 			bool atV = pointAtVerticalBorder(x);
 			bool atH = pointAtHorizontalBorder(y);
 
@@ -289,6 +298,7 @@ void handleEvent(SDL_Event* e)
 						{
 							SDL_RenderDrawPoint(renderer, i, j);
 							SDL_RenderPresent(renderer);
+							pixels.push_back(SDL_Point(i, j));
 						}
 					}
 				}
@@ -329,6 +339,7 @@ int main(int argc, char* args[])
 		SDL_Event e;
 		while (!quit)
 		{
+			SDL_WaitEventTimeout(NULL, EVENT_TIMEOUT);
 			while (SDL_PollEvent(&e))
 			{
 				if (e.type == SDL_QUIT)
