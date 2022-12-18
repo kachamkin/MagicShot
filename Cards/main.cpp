@@ -161,8 +161,63 @@ void copyToClipboard()
 	ReleaseDC(NULL, hDC);
 }
 
+SDL_Rect getInnerRect()
+{
+	SDL_Rect newRect = rect;
+	newRect.x = rect.x + BORDER_WIDTH;
+	newRect.w = rect.w - 2 * BORDER_WIDTH;
+	newRect.y = rect.y + BORDER_WIDTH;
+	newRect.h = rect.h - 2 * BORDER_WIDTH;
+
+	return newRect;
+}
+
+bool pointAtVerticalBorder(int x)
+{
+	return x <= rect.x + rect.w && x > rect.x + rect.w - BORDER_WIDTH || x < rect.x + BORDER_WIDTH && x >= rect.x;
+}
+
+bool pointAtHorizontalBorder(int y)
+{
+	return y <= rect.y + rect.h && y > rect.y + rect.h - BORDER_WIDTH || y < rect.y + BORDER_WIDTH && y >= rect.y;
+}
+
+void setCursor(int x, int y)
+{
+	bool atV = pointAtVerticalBorder(x);
+	bool atH = pointAtHorizontalBorder(y);
+	if (atV || atH)
+	{
+		if (atV)
+			SDL_SetCursor(SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZEWE));
+		if (atH)
+			SDL_SetCursor(SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZENS));
+	}
+	else
+		SDL_SetCursor(SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW));
+}
+
+void drawRectangle()
+{
+	SDL_Rect newRect = getInnerRect();
+
+	SDL_RenderClear(renderer);
+
+	SDL_SetRenderDrawColor(renderer, BORDER_COLOR);
+	SDL_RenderFillRect(renderer, &rect);
+	SDL_SetRenderDrawColor(renderer, 255, 255, 255, 0);
+	SDL_RenderFillRect(renderer, &newRect);
+	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
+	
+	SDL_RenderPresent(renderer);
+}
+
 void handleEvent(SDL_Event* e)
 {
+	int x, y;
+	Uint32 state = SDL_GetMouseState(&x, &y);
+	setCursor(x, y);
+
 	if (e->type == SDL_MOUSEBUTTONUP)
 	{
 		initX = 0;
@@ -171,8 +226,6 @@ void handleEvent(SDL_Event* e)
 
 	if (e->type == SDL_MOUSEMOTION)
 	{
-		int x, y;
-		Uint32 state = SDL_GetMouseState(&x, &y);
 		if (state & SDL_BUTTON_LMASK)
 		{
 			if (!initX && !initY)
@@ -182,6 +235,27 @@ void handleEvent(SDL_Event* e)
 			}
 
 			SDL_Point p(x, y);
+			bool atV = pointAtVerticalBorder(x);
+			bool atH = pointAtHorizontalBorder(y);
+			if (atV || atH)
+			{
+				if (atV && x >= rect.x + rect.w - BORDER_WIDTH)
+					rect.w = x + BORDER_WIDTH - rect.x;
+				if (atV && x <= rect.x + BORDER_WIDTH)
+				{
+					rect.w += rect.x - x + BORDER_WIDTH;
+					rect.x = x - BORDER_WIDTH;
+				}
+				if (atH && y >= rect.y + rect.h - BORDER_WIDTH)
+					rect.h = y + BORDER_WIDTH - rect.y;
+				if (atH && y <= rect.y + BORDER_WIDTH)
+				{
+					rect.h += rect.y - y + BORDER_WIDTH;
+					rect.y = y - BORDER_WIDTH;
+				}
+				drawRectangle();
+			}
+
 			if (SDL_PointInRect(&p, &rect))
 			{
 				SDL_SetRenderDrawColor(renderer, SELECTION_COLOR);
@@ -190,12 +264,11 @@ void handleEvent(SDL_Event* e)
 					for (int j = 0; j < gScreenSurface->h; j++)
 					{
 						if ((i - x) * (i - x) + (j - y) * (j - y) <= SELECTION_WIDTH * SELECTION_WIDTH)
-						{
 							SDL_RenderDrawPoint(renderer, i, j);
-						}
 					}
 				}
-				SDL_RenderPresent(renderer); 
+				SDL_RenderPresent(renderer);
+				SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
 			}
 			else
 			{
@@ -203,21 +276,7 @@ void handleEvent(SDL_Event* e)
 				rect.y = initY;
 				rect.w = x > initX ? x - initX : initX - x;
 				rect.h = y > initY ? y - initY : initY - y;
-
-				SDL_Rect newRect = rect;
-				newRect.x = rect.x + BORDER_WIDTH;
-				newRect.w = rect.w - 2 * BORDER_WIDTH;
-				newRect.y = rect.y + BORDER_WIDTH;
-				newRect.h = rect.h - 2 * BORDER_WIDTH;
-
-				SDL_RenderClear(renderer);
-
-				SDL_SetRenderDrawColor(renderer, BORDER_COLOR);
-				SDL_RenderFillRect(renderer, &rect);
-				SDL_SetRenderDrawColor(renderer, 255, 255, 255, 0);
-				SDL_RenderFillRect(renderer, &newRect);
-				SDL_RenderPresent(renderer);
-				SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
+				drawRectangle();
 			}
 		}
 	}
@@ -241,7 +300,7 @@ int main(int argc, char* args[])
 {
 	if (init())
 	{
-		appDir = getAppDir(args[0]);
+		appDir = getAppDir(args[0]); 
 		
 		SDL_Surface* icon = IMG_Load((appDir + WINDOW_ICON).data());
 		if (icon)

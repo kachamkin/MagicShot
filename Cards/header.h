@@ -12,7 +12,7 @@
 using namespace std;
 
 #define EVENT_TIMEOUT 64
-#define BORDER_WIDTH 6
+#define BORDER_WIDTH 10
 #define BORDER_COLOR 0, 0, 255, 0
 #define SELECTION_COLOR 255, 0, 0, 0
 #define SELECTION_WIDTH 3
