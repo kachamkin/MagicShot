@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+	<Product Id="*" Name="MagicShot" Language="1033" Version="1.0.0.0" Manufacturer="Andrey Kachamkin" UpgradeCode="b606b258-a19b-409b-a58c-7b5ff4f3f9b0">
+		<Package InstallerVersion="200" Compressed="yes" Platform="x64" InstallScope="perMachine" Keywords="Screenshot" Comments="Simple screenshot maker"/>
+
+		<MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
+		<MediaTemplate EmbedCab="yes" />
+
+		<Feature Id="ProductFeature" Title="MagicShot" Level="1">
+			<ComponentGroupRef Id="ProductComponents" />
+		</Feature>
+
+		<Property Id="WIXUI_INSTALLDIR" Value="INSTALLFOLDER" />
+		<Property Id="ARPPRODUCTICON" Value="MagicShot.exe" />
+
+		<Icon Id="MagicShot.exe" SourceFile='C:\Users\kacha\source\repos\MagicShot\x64\Release\screenshot_icon.png' />
+		<UIRef Id="WixUI_InstallDir" />
+		<WixVariable Id="WixUILicenseRtf" Value="C:\Users\kacha\source\repos\SignTool\SignTool\bin\Release\net6.0-windows\publish\win-x64\License.rtf" />
+	</Product>
+
+	<Fragment>
+		<Directory Id="TARGETDIR" Name="SourceDir">
+			<Directory Id="ProgramFiles64Folder">
+				<Directory Id="DirManufacturer" Name="Andrey Kachamkin">
+					<Directory Id="INSTALLFOLDER" Name="MagicShot" />
+				</Directory>
+			</Directory>
+			<Directory Id="ProgramMenuFolder" Name="Programs">
+				<Directory Id="ProgramMenuDir" Name="Andrey Kachamkin">
+				</Directory>
+			</Directory>
+			<Directory Id="DesktopFolder" Name="Desktop" />
+		</Directory>
+	</Fragment>
+
+	<Fragment>
+		<ComponentGroup Id="ProductComponents" Directory="INSTALLFOLDER">
+			<Component Id="ProgramMenuDir" Guid="043B387B-C333-4943-9AA2-9588CC093744" Win64="yes">
+				<RemoveFolder Id='ProgramMenuDir' Directory='ProgramMenuDir' On='uninstall' />
+				<RegistryValue Root='HKCU' Key='Software\[Manufacturer]\[ProductName]' Type='string' Value='' KeyPath='yes' />
+			</Component>		
+		<Component Id='MainExecutable' Guid='FDFBE349-55A1-4DE4-A497-C5B034FA5C7D' Win64='yes'>
+			<File Id='MagicShot.exe' Name='MagicShot.exe' Source='C:\Users\kacha\source\repos\MagicShot\x64\Release\MagicShot.exe' KeyPath='yes'>
+				<Shortcut Id="desktopMagicShot" Directory="DesktopFolder" Name="MagicShot" WorkingDirectory='INSTALLFOLDER' Advertise="yes" Icon= "MagicShot.exe"/>
+				<Shortcut Id="programMenuSignTool" Directory="ProgramMenuDir" Name="Sign Tool" WorkingDirectory='INSTALLFOLDER' Advertise="yes" Icon= "MagicShot.exe"/>
+			</File>
+			<File Id='screenshot_icon.png' Name='screenshot_icon.png' Source='C:\Users\kacha\source\repos\MagicShot\x64\Release\screenshot_icon.png'/>
+			<File Id='SDL2.dll' Name='SDL2.dll' Source='C:\Users\kacha\source\repos\MagicShot\x64\Release\SDL2.dll'/>
+			<File Id='SDL2_image.dll' Name='SDL2_image.dll' Source='C:\Users\kacha\source\repos\MagicShot\x64\Release\SDL2_image.dll'/>
+		</Component>
+		</ComponentGroup>
+	</Fragment>
+</Wix>
