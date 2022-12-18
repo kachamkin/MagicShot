@@ -217,9 +217,9 @@ void drawRectangle()
 
 	SDL_SetRenderDrawColor(renderer, BORDER_COLOR);
 	SDL_RenderFillRect(renderer, &rect);
+	
 	SDL_SetRenderDrawColor(renderer, 255, 255, 255, 0);
 	SDL_RenderFillRect(renderer, &newRect);
-	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
 
 	SDL_SetRenderDrawColor(renderer, SELECTION_COLOR);
 	for (auto const& p : pixels)
@@ -227,6 +227,7 @@ void drawRectangle()
 			SDL_RenderDrawPoint(renderer, p.x, p.y);
 
 	SDL_RenderPresent(renderer);
+
 	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
 }
 
