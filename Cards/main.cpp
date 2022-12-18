@@ -262,18 +262,18 @@ void handleEvent(SDL_Event* e)
 			if (atV || atH)
 			{
 				if (atV && x > rect.x + rect.w - BORDER_WIDTH)
-					rect.w = x + BORDER_WIDTH - rect.x;
+					rect.w += x - prevX; 
 				if (atV && x < rect.x + BORDER_WIDTH)
 				{
-					rect.w += rect.x - x + BORDER_WIDTH;
-					rect.x = x - BORDER_WIDTH;
+					rect.w += prevX - x; 
+					rect.x += x - prevX;
 				}
 				if (atH && y > rect.y + rect.h - BORDER_WIDTH)
-					rect.h = y + BORDER_WIDTH - rect.y;
+					rect.h += y - prevY;
 				if (atH && y < rect.y + BORDER_WIDTH)
 				{
-					rect.h += rect.y - y + BORDER_WIDTH;
-					rect.y = y - BORDER_WIDTH;
+					rect.h += prevY - y; 
+					rect.y += y - prevY;
 				}
 				drawRectangle();
 			}
@@ -303,6 +303,8 @@ void handleEvent(SDL_Event* e)
 				drawRectangle();
 			}
 		}
+		prevX = x;
+		prevY = y;
 	}
 }
 

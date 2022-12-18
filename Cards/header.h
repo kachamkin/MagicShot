@@ -24,7 +24,7 @@ SDL_Surface* gScreenSurface = NULL;
 SDL_Renderer* renderer = NULL;
 SDL_Rect rect;
 
-int initX = 0, initY = 0;
+int initX = 0, initY = 0, prevX = 0, prevY = 0;
 
 bool quit = false;
 
