@@ -12,8 +12,8 @@
 using namespace std;
 
 #define EVENT_TIMEOUT 64
-#define BORDER_WIDTH 20
-#define BORDER_COLOR 0, 0, 255, 0
+#define BORDER_WIDTH 40
+#define BORDER_COLOR 80, 80, 80, 0
 #define SELECTION_COLOR 255, 0, 0, 0
 #define SELECTION_WIDTH 3
 #define WINDOW_OPACITY 0.3
