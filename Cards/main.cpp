@@ -136,7 +136,7 @@ void copyToClipboard()
 	if (!memDC)
 		return;
 
-	HBITMAP bm = CreateCompatibleBitmap(hDC, rect.w, rect.h);
+	HBITMAP bm = CreateCompatibleBitmap(hDC, rect.w - 2 * BORDER_WIDTH, rect.h - 2 * BORDER_WIDTH);
 	if (!bm)
 		return;
 
@@ -144,7 +144,7 @@ void copyToClipboard()
 	if (!oldbm)
 		return; 
 
-	if (!BitBlt(memDC, -rect.x, -rect.y, rect.x + rect.w, rect.y + rect.h, hDC, 0, 0, SRCCOPY))
+	if (!BitBlt(memDC, - BORDER_WIDTH - rect.x, - BORDER_WIDTH - rect.y, rect.x + rect.w - BORDER_WIDTH, rect.y + rect.h - BORDER_WIDTH, hDC, 0, 0, SRCCOPY))
 		return;
 	
 	OpenClipboard(NULL);
@@ -174,18 +174,30 @@ SDL_Rect getInnerRect()
 
 bool pointAtVerticalBorder(int x)
 {
-	return x <= rect.x + rect.w && x > rect.x + rect.w - BORDER_WIDTH || x < rect.x + BORDER_WIDTH && x >= rect.x;
+	return x < rect.x + rect.w && x > rect.x + rect.w - BORDER_WIDTH || x < rect.x + BORDER_WIDTH && x > rect.x;
 }
 
 bool pointAtHorizontalBorder(int y)
 {
-	return y <= rect.y + rect.h && y > rect.y + rect.h - BORDER_WIDTH || y < rect.y + BORDER_WIDTH && y >= rect.y;
+	return y < rect.y + rect.h && y > rect.y + rect.h - BORDER_WIDTH || y < rect.y + BORDER_WIDTH && y > rect.y;
 }
 
 void setCursor(int x, int y)
 {
 	bool atV = pointAtVerticalBorder(x);
 	bool atH = pointAtHorizontalBorder(y);
+
+	if (atV && atH)
+	{
+		if (x < rect.x + BORDER_WIDTH && x > rect.x && y < rect.y + BORDER_WIDTH && y > rect.y || x < rect.x + rect.w && x > rect.x + rect.w - BORDER_WIDTH && y < rect.y + rect.h && y > rect.y + rect.h - BORDER_WIDTH)
+			SDL_SetCursor(SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZENWSE));
+		else if (x < rect.x + rect.w && x > rect.x + rect.w - BORDER_WIDTH && y < rect.y + BORDER_WIDTH && y > rect.y || x < rect.x + BORDER_WIDTH && x > rect.x && y < rect.y + rect.h && y > rect.y + rect.h - BORDER_WIDTH)
+			SDL_SetCursor(SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZENESW));
+		else
+			SDL_SetCursor(SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW));
+		return;
+	}
+
 	if (atV || atH)
 	{
 		if (atV)
@@ -214,6 +226,15 @@ void drawRectangle()
 
 void handleEvent(SDL_Event* e)
 {
+	if (e->key.keysym.scancode == SDL_SCANCODE_C)
+	{
+		copyToClipboard();
+		quit = true;
+	}
+
+	if (e->key.keysym.scancode == SDL_SCANCODE_ESCAPE)
+		quit = true;
+	
 	int x, y;
 	Uint32 state = SDL_GetMouseState(&x, &y);
 	setCursor(x, y);
@@ -237,18 +258,19 @@ void handleEvent(SDL_Event* e)
 			SDL_Point p(x, y);
 			bool atV = pointAtVerticalBorder(x);
 			bool atH = pointAtHorizontalBorder(y);
+
 			if (atV || atH)
 			{
-				if (atV && x >= rect.x + rect.w - BORDER_WIDTH)
+				if (atV && x > rect.x + rect.w - BORDER_WIDTH)
 					rect.w = x + BORDER_WIDTH - rect.x;
-				if (atV && x <= rect.x + BORDER_WIDTH)
+				if (atV && x < rect.x + BORDER_WIDTH)
 				{
 					rect.w += rect.x - x + BORDER_WIDTH;
 					rect.x = x - BORDER_WIDTH;
 				}
-				if (atH && y >= rect.y + rect.h - BORDER_WIDTH)
+				if (atH && y > rect.y + rect.h - BORDER_WIDTH)
 					rect.h = y + BORDER_WIDTH - rect.y;
-				if (atH && y <= rect.y + BORDER_WIDTH)
+				if (atH && y < rect.y + BORDER_WIDTH)
 				{
 					rect.h += rect.y - y + BORDER_WIDTH;
 					rect.y = y - BORDER_WIDTH;
@@ -264,10 +286,12 @@ void handleEvent(SDL_Event* e)
 					for (int j = 0; j < gScreenSurface->h; j++)
 					{
 						if ((i - x) * (i - x) + (j - y) * (j - y) <= SELECTION_WIDTH * SELECTION_WIDTH)
+						{
 							SDL_RenderDrawPoint(renderer, i, j);
+							SDL_RenderPresent(renderer);
+						}
 					}
 				}
-				SDL_RenderPresent(renderer);
 				SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
 			}
 			else
@@ -280,15 +304,6 @@ void handleEvent(SDL_Event* e)
 			}
 		}
 	}
-
-	if (e->key.keysym.scancode == SDL_SCANCODE_C && (e->key.keysym.mod == KMOD_LCTRL || e->key.keysym.mod == KMOD_RCTRL))
-	{
-		copyToClipboard();
-		quit = true;
-	}
-
-	if (e->key.keysym.scancode == SDL_SCANCODE_ESCAPE)
-		quit = true;
 }
 
 string getAppDir(char* arg)
@@ -312,7 +327,6 @@ int main(int argc, char* args[])
 		SDL_Event e;
 		while (!quit)
 		{
-			SDL_WaitEventTimeout(NULL, EVENT_TIMEOUT);
 			while (SDL_PollEvent(&e))
 			{
 				if (e.type == SDL_QUIT)
