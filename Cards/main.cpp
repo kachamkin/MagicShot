@@ -287,6 +287,7 @@ void handleEvent(SDL_Event* e)
 				drawRectangle();
 			}
 
+			SDL_Rect innerRect = getInnerRect();
 			if (SDL_PointInRect(&p, &rect))
 			{
 				SDL_SetRenderDrawColor(renderer, SELECTION_COLOR);
@@ -294,7 +295,8 @@ void handleEvent(SDL_Event* e)
 				{
 					for (int j = 0; j < gScreenSurface->h; j++)
 					{
-						if ((i - x) * (i - x) + (j - y) * (j - y) <= SELECTION_WIDTH * SELECTION_WIDTH)
+						SDL_Point pp(i, j);
+						if ((i - x) * (i - x) + (j - y) * (j - y) <= SELECTION_WIDTH * SELECTION_WIDTH && SDL_PointInRect(&pp, &innerRect))
 						{
 							SDL_RenderDrawPoint(renderer, i, j);
 							SDL_RenderPresent(renderer);
