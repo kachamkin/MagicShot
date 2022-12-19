@@ -42,7 +42,7 @@
 		<Component Id='MainExecutable' Guid='FDFBE349-55A1-4DE4-A497-C5B034FA5C7D' Win64='yes'>
 			<File Id='MagicShot.exe' Name='MagicShot.exe' Source='C:\Users\kacha\source\repos\MagicShot\x64\Release\MagicShot.exe' KeyPath='yes'>
 				<Shortcut Id="desktopMagicShot" Directory="DesktopFolder" Name="MagicShot" WorkingDirectory='INSTALLFOLDER' Advertise="yes" Icon= "MagicShot.exe"/>
-				<Shortcut Id="programMenuSignTool" Directory="ProgramMenuDir" Name="Sign Tool" WorkingDirectory='INSTALLFOLDER' Advertise="yes" Icon= "MagicShot.exe"/>
+				<Shortcut Id="programMenuSignTool" Directory="ProgramMenuDir" Name="MagicShot" WorkingDirectory='INSTALLFOLDER' Advertise="yes" Icon= "MagicShot.exe"/>
 			</File>
 			<File Id='screenshot_icon.png' Name='screenshot_icon.png' Source='C:\Users\kacha\source\repos\MagicShot\x64\Release\screenshot_icon.png'/>
 			<File Id='SDL2.dll' Name='SDL2.dll' Source='C:\Users\kacha\source\repos\MagicShot\x64\Release\SDL2.dll'/>

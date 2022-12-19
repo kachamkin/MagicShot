@@ -1,39 +1,29 @@
 #include "header.h"
 
-bool init()
-{
-	bool success = true;
-	if (SDL_Init(SDL_INIT_VIDEO) < 0)
-		success = false;
-	else
-	{
-		gWindow = SDL_CreateWindow("MagicShot", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 800, 600, SDL_WINDOW_SHOWN | SDL_WINDOW_ALWAYS_ON_TOP | SDL_WINDOW_FULLSCREEN_DESKTOP);
-		if (gWindow == NULL)
-			success = false;
-		else
-			gScreenSurface = SDL_GetWindowSurface(gWindow);
-	}
-
-	return success;
-}
-
-void close()
-{
-	SDL_DestroyRenderer(renderer);
-	SDL_FreeSurface(gScreenSurface);
-	SDL_Quit();
-}
-
 PBITMAPINFO CreateBitmapInfoStruct(HBITMAP hBmp)
 {
 	BITMAP bmp{};
 	PBITMAPINFO pbmi;
-	WORD    cClrBits = 32;
+	WORD    cClrBits;
 
 	if (!GetObject(hBmp, sizeof(BITMAP), (LPSTR)&bmp))
 		return NULL;
 
-	pbmi = (PBITMAPINFO)malloc(sizeof(BITMAPINFOHEADER));
+	cClrBits = bmp.bmPlanes* bmp.bmBitsPixel;
+	if (cClrBits == 1)
+		cClrBits = 1;
+	else if (cClrBits <= 4)
+		cClrBits = 4;
+	else if (cClrBits <= 8)
+		cClrBits = 8;
+	else if (cClrBits <= 16)
+		cClrBits = 16;
+	else if (cClrBits <= 24)
+		cClrBits = 24;
+	else cClrBits = 32;
+
+	pbmi = cClrBits < 24 ? (PBITMAPINFO)malloc(sizeof(BITMAPINFOHEADER) + sizeof(RGBQUAD) * (static_cast<unsigned long long>(1) << cClrBits)) :
+		(PBITMAPINFO)malloc(sizeof(BITMAPINFOHEADER));
 	if (!pbmi)
 		return NULL;
 
@@ -59,7 +49,7 @@ void CreateBMPFile(PBITMAPINFO pbi, HBITMAP hBMP, string path)
 
 	BITMAPFILEHEADER hdr{};
 	PBITMAPINFOHEADER pbih;
-	LPBYTE lpBits;
+	LPVOID lpBits;
 
 	pbih = (PBITMAPINFOHEADER)pbi;
 	lpBits = (LPBYTE)malloc(pbih->biSizeImage);
@@ -73,7 +63,7 @@ void CreateBMPFile(PBITMAPINFO pbi, HBITMAP hBMP, string path)
 	if (!GetDIBits(hDC, hBMP, 0, (WORD)pbih->biHeight, lpBits, pbi, DIB_RGB_COLORS))
 		return;
 
-	hdr.bfType = 0x4d42;        // 0x42 = "B" 0x4d = "M"  
+	hdr.bfType = 0x4d42;         
 	hdr.bfSize = (DWORD)(sizeof(BITMAPFILEHEADER) +
 		pbih->biSize + pbih->biClrUsed
 		* sizeof(RGBQUAD) + pbih->biSizeImage);
@@ -94,8 +84,11 @@ void CreateBMPFile(PBITMAPINFO pbi, HBITMAP hBMP, string path)
 	memcpy(pbResult + sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER) + pbih->biClrUsed * sizeof(RGBQUAD), lpBits, pbih->biSizeImage);
 
 	FILE* file = fopen(path.data(), "w+");
-	fwrite(pbResult, 1, total, file);
-	fclose(file);
+	if (file)
+	{
+		fwrite(pbResult, 1, total, file);
+		fclose(file);
+	}
 
 	free(pbResult);
 	free(pbi);
@@ -107,7 +100,7 @@ void copyAsFile(HBITMAP hBitmap)
 	string path = filesystem::temp_directory_path().string() + "/Screenshot.bmp";
 
 	CreateBMPFile(CreateBitmapInfoStruct(hBitmap), hBitmap, path);
-	
+
 	int size = sizeof(DROPFILES) + ((lstrlenA(path.data()) + 2));
 	HGLOBAL hGlobal = GlobalAlloc(GMEM_MOVEABLE, size);
 	if (!hGlobal)
@@ -126,9 +119,23 @@ void copyAsFile(HBITMAP hBitmap)
 	SetClipboardData(CF_HDROP, hGlobal);
 }
 
-void copyToClipboard()
+void copyToClipboard(bool isDesktop = true, int x = 0, int y = 0, int w = 0, int h = 0)
 {
-	HDC hDC = GetDC(NULL);
+	if (!w && !h)
+	{
+		w = GetSystemMetrics(SM_CXVIRTUALSCREEN) - 1;
+		h = GetSystemMetrics(SM_CYVIRTUALSCREEN);
+	}
+
+	HWND hWnd = NULL;
+	if (isDesktop)
+	{
+		hWnd = GetDesktopWindow();
+		if (!hWnd)
+			return;
+	}
+
+	HDC hDC = GetDC(hWnd);
 	if (!hDC)
 		return;
 
@@ -136,17 +143,17 @@ void copyToClipboard()
 	if (!memDC)
 		return;
 
-	HBITMAP bm = CreateCompatibleBitmap(hDC, rect.w - 2 * BORDER_WIDTH, rect.h - 2 * BORDER_WIDTH);
+	HBITMAP bm = CreateCompatibleBitmap(hDC, w, h);
 	if (!bm)
 		return;
 
 	HGDIOBJ oldbm = SelectObject(memDC, bm);
 	if (!oldbm)
-		return; 
-
-	if (!BitBlt(memDC, - BORDER_WIDTH - rect.x, - BORDER_WIDTH - rect.y, rect.x + rect.w - BORDER_WIDTH, rect.y + rect.h - BORDER_WIDTH, hDC, 0, 0, SRCCOPY))
 		return;
-	
+
+	if (!BitBlt(memDC, x, y, w, h, hDC, 0, 0, SRCCOPY | CAPTUREBLT))
+		return;
+
 	OpenClipboard(NULL);
 	EmptyClipboard();
 	SetClipboardData(CF_BITMAP, bm);
@@ -155,10 +162,38 @@ void copyToClipboard()
 
 	CloseClipboard();
 
+	SelectObject(memDC, oldbm);
+
 	DeleteObject(oldbm);
 	DeleteObject(bm);
-	ReleaseDC(NULL, memDC);
-	ReleaseDC(NULL, hDC);
+	DeleteDC(memDC);
+	ReleaseDC(hWnd, hDC);
+}
+
+bool init()
+{
+	bool success = true;
+	if (SDL_Init(SDL_INIT_VIDEO) < 0)
+		success = false;
+	else
+	{
+		copyToClipboard(true);
+		gWindow = SDL_CreateWindow("MagicShot", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 0, 0, SDL_WINDOW_SHOWN | SDL_WINDOW_ALWAYS_ON_TOP | SDL_WINDOW_FULLSCREEN_DESKTOP);
+		if (!gWindow)
+			success = false;
+		else
+			gScreenSurface = SDL_GetWindowSurface(gWindow);
+	}
+
+	return success;
+}
+
+void close()
+{
+	SDL_DestroyTexture(text);
+	SDL_DestroyRenderer(renderer);
+	SDL_FreeSurface(gScreenSurface);
+	SDL_Quit();
 }
 
 SDL_Rect getInnerRect()
@@ -214,12 +249,35 @@ void drawRectangle()
 	SDL_Rect newRect = getInnerRect();
 
 	SDL_RenderClear(renderer);
+	SDL_RenderCopy(renderer, text, NULL, NULL);
 
 	SDL_SetRenderDrawColor(renderer, BORDER_COLOR);
-	SDL_RenderFillRect(renderer, &rect);
-	
-	SDL_SetRenderDrawColor(renderer, 255, 255, 255, 0);
-	SDL_RenderFillRect(renderer, &newRect);
+
+	SDL_Rect rectToFill;
+
+	rectToFill.x = rect.x;
+	rectToFill.y = rect.y;
+	rectToFill.w = rect.w;
+	rectToFill.h = BORDER_WIDTH;
+	SDL_RenderFillRect(renderer, &rectToFill);
+
+	rectToFill.x = rect.x;
+	rectToFill.y = rect.y + rect.h - BORDER_WIDTH;
+	rectToFill.w = rect.w;
+	rectToFill.h = BORDER_WIDTH;
+	SDL_RenderFillRect(renderer, &rectToFill);
+
+	rectToFill.x = rect.x;
+	rectToFill.y = rect.y + BORDER_WIDTH;
+	rectToFill.w = BORDER_WIDTH;
+	rectToFill.h = rect.h - 2 * BORDER_WIDTH;
+	SDL_RenderFillRect(renderer, &rectToFill);
+
+	rectToFill.x = rect.x + rect.w - BORDER_WIDTH;
+	rectToFill.y = rect.y + BORDER_WIDTH;
+	rectToFill.w = BORDER_WIDTH;
+	rectToFill.h = rect.h - 2 * BORDER_WIDTH;
+	SDL_RenderFillRect(renderer, &rectToFill);
 
 	SDL_SetRenderDrawColor(renderer, SELECTION_COLOR);
 	for (auto const& p : pixels)
@@ -228,14 +286,14 @@ void drawRectangle()
 
 	SDL_RenderPresent(renderer);
 
-	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
+	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 100);
 }
 
 void handleEvent(SDL_Event* e)
 {
 	if (e->key.keysym.scancode == SDL_SCANCODE_C)
 	{
-		copyToClipboard();
+		copyToClipboard(false, -BORDER_WIDTH - rect.x, -BORDER_WIDTH - rect.y, rect.x + rect.w - BORDER_WIDTH, rect.y + rect.h - BORDER_WIDTH);
 		quit = true;
 	}
 
@@ -335,9 +393,14 @@ int main(int argc, char* args[])
 		SDL_Surface* icon = IMG_Load((appDir + WINDOW_ICON).data());
 		if (icon)
 			SDL_SetWindowIcon(gWindow, icon);
-		
-		SDL_SetWindowOpacity(gWindow, WINDOW_OPACITY);
+
 		renderer = SDL_CreateRenderer(gWindow, -1, SDL_RENDERER_ACCELERATED);
+		SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+
+		SDL_Surface* deskTop = SDL_LoadBMP((filesystem::temp_directory_path().string() + "/Screenshot.bmp").data());
+		text = SDL_CreateTextureFromSurface(renderer, deskTop);
+		SDL_RenderCopy(renderer, text, NULL, NULL);
+		SDL_RenderPresent(renderer);
 
 		SDL_Event e;
 		while (!quit)

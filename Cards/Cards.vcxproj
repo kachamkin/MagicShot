@@ -74,10 +74,12 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <IncludePath>C:\Users\kacha\.nuget\SDL2_image-2.6.2\include;C:\Users\kacha\.nuget\SDL2-2.26.1\include;C:\Users\kacha\.nuget\SDL2_mixer-2.6.2\include;C:\Users\kacha\.nuget\SDL2_ttf-2.20.1\include;$(IncludePath)</IncludePath>
     <LibraryPath>C:\Users\kacha\.nuget\SDL2-2.26.1\lib\x64;$(LibraryPath)</LibraryPath>
+    <ExcludePath>$(ExcludePath)</ExcludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <IncludePath>C:\Users\kacha\.nuget\SDL2_image-2.6.2\include;C:\Users\kacha\.nuget\SDL2-2.26.1\include;C:\Users\kacha\.nuget\SDL2_mixer-2.6.2\include;C:\Users\kacha\.nuget\SDL2_ttf-2.20.1\include;$(IncludePath)</IncludePath>
     <LibraryPath>C:\Users\kacha\.nuget\SDL2-2.26.1\lib\x64;$(LibraryPath)</LibraryPath>
+    <ExcludePath>$(ExcludePath)</ExcludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -114,6 +116,7 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
+      <LanguageStandard_C>stdc17</LanguageStandard_C>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -132,6 +135,7 @@
       <LanguageStandard>stdcpp20</LanguageStandard>
       <Optimization>MinSpace</Optimization>
       <FavorSizeOrSpeed>Size</FavorSizeOrSpeed>
+      <LanguageStandard_C>stdc17</LanguageStandard_C>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
