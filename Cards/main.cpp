@@ -15,18 +15,17 @@ wchar_t* a2w(const char* c)
 
 int GetEncoderClsid(const WCHAR* format, CLSID* pClsid)
 {
-	using namespace Gdiplus;
 	UINT  num = 0;          
 	UINT  size = 0;         
 
 	ImageCodecInfo* pImageCodecInfo = NULL;
 
 	GetImageEncodersSize(&num, &size);
-	if (size == 0)
+	if (!size)
 		return -1;  
 
 	pImageCodecInfo = (ImageCodecInfo*)(malloc(size));
-	if (pImageCodecInfo == NULL)
+	if (!pImageCodecInfo)
 		return -1;  
 
 	GetImageEncoders(num, size, pImageCodecInfo);
@@ -47,9 +46,9 @@ int GetEncoderClsid(const WCHAR* format, CLSID* pClsid)
 
 void copyAsFile(HBITMAP hBitmap, bool png = false)
 {
-	Gdiplus::GdiplusStartupInput gdiplusStartupInput;
+	GdiplusStartupInput gdiplusStartupInput;
 	GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL);
-	Gdiplus::Bitmap bm(hBitmap, 0);
+	Bitmap bm(hBitmap, 0);
 
 	CLSID clsid;
 	string fileName;
@@ -138,7 +137,7 @@ void copyToClipboard(bool isDesktop = true, int x = 0, int y = 0, int w = 0, int
 	DeleteDC(memDC);
 	ReleaseDC(hWnd, hDC); 
 
-	Gdiplus::GdiplusShutdown(gdiplusToken);
+	GdiplusShutdown(gdiplusToken);
 }
 
 bool init()

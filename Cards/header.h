@@ -11,6 +11,7 @@
 #include <gdiplus.h>
 
 using namespace std;
+using namespace Gdiplus;
 
 #define EVENT_TIMEOUT 64
 #define BORDER_WIDTH 30
