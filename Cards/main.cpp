@@ -1,107 +1,75 @@
 #include "header.h"
 
-PBITMAPINFO CreateBitmapInfoStruct(HBITMAP hBmp)
+wchar_t* a2w(const char* c)
 {
-	BITMAP bmp{};
-	PBITMAPINFO pbmi;
-	WORD    cClrBits;
-
-	if (!GetObject(hBmp, sizeof(BITMAP), (LPSTR)&bmp))
+	size_t len = strlen(c);
+	wchar_t* wc = new wchar_t[len + 1] {L'\0'};
+	if (!wc)
 		return NULL;
 
-	cClrBits = bmp.bmPlanes* bmp.bmBitsPixel;
-	if (cClrBits == 1)
-		cClrBits = 1;
-	else if (cClrBits <= 4)
-		cClrBits = 4;
-	else if (cClrBits <= 8)
-		cClrBits = 8;
-	else if (cClrBits <= 16)
-		cClrBits = 16;
-	else if (cClrBits <= 24)
-		cClrBits = 24;
-	else cClrBits = 32;
+	for (size_t i = 0; i < len; i++)
+		wc[i] = (wchar_t)c[i];
 
-	pbmi = cClrBits < 24 ? (PBITMAPINFO)malloc(sizeof(BITMAPINFOHEADER) + sizeof(RGBQUAD) * (static_cast<unsigned long long>(1) << cClrBits)) :
-		(PBITMAPINFO)malloc(sizeof(BITMAPINFOHEADER));
-	if (!pbmi)
-		return NULL;
-
-	pbmi->bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
-	pbmi->bmiHeader.biWidth = bmp.bmWidth;
-	pbmi->bmiHeader.biHeight = bmp.bmHeight;
-	pbmi->bmiHeader.biPlanes = bmp.bmPlanes;
-	pbmi->bmiHeader.biBitCount = bmp.bmBitsPixel;
-	if (cClrBits < 24)
-		pbmi->bmiHeader.biClrUsed = (1 << cClrBits);
-
-	pbmi->bmiHeader.biCompression = BI_RGB;
-
-	pbmi->bmiHeader.biSizeImage = ((pbmi->bmiHeader.biWidth * cClrBits + 31) & ~31) / 8 * pbmi->bmiHeader.biHeight;
-	pbmi->bmiHeader.biClrImportant = 0;
-	return pbmi;
+	return wc;
 }
 
-void CreateBMPFile(PBITMAPINFO pbi, HBITMAP hBMP, string path)
+int GetEncoderClsid(const WCHAR* format, CLSID* pClsid)
 {
-	if (!pbi)
-		return;
+	using namespace Gdiplus;
+	UINT  num = 0;          
+	UINT  size = 0;         
 
-	BITMAPFILEHEADER hdr{};
-	PBITMAPINFOHEADER pbih;
-	LPVOID lpBits;
+	ImageCodecInfo* pImageCodecInfo = NULL;
 
-	pbih = (PBITMAPINFOHEADER)pbi;
-	lpBits = (LPBYTE)malloc(pbih->biSizeImage);
-	if (!lpBits)
-		return;
+	GetImageEncodersSize(&num, &size);
+	if (size == 0)
+		return -1;  
 
-	HDC hDC = CreateDC(L"DISPLAY", NULL, NULL, NULL);
-	if (!hDC)
-		return;
+	pImageCodecInfo = (ImageCodecInfo*)(malloc(size));
+	if (pImageCodecInfo == NULL)
+		return -1;  
 
-	if (!GetDIBits(hDC, hBMP, 0, (WORD)pbih->biHeight, lpBits, pbi, DIB_RGB_COLORS))
-		return;
+	GetImageEncoders(num, size, pImageCodecInfo);
 
-	hdr.bfType = 0x4d42;         
-	hdr.bfSize = (DWORD)(sizeof(BITMAPFILEHEADER) +
-		pbih->biSize + pbih->biClrUsed
-		* sizeof(RGBQUAD) + pbih->biSizeImage);
-	hdr.bfReserved1 = 0;
-	hdr.bfReserved2 = 0;
-
-	hdr.bfOffBits = (DWORD)sizeof(BITMAPFILEHEADER) +
-		pbih->biSize + pbih->biClrUsed
-		* sizeof(RGBQUAD);
-
-	DWORD total = sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER) + pbih->biClrUsed * sizeof(RGBQUAD) + pbih->biSizeImage;
-	BYTE* pbResult = (BYTE*)malloc(total);
-	if (!pbResult)
-		return;
-
-	memcpy(pbResult, &hdr, sizeof(BITMAPFILEHEADER));
-	memcpy(pbResult + sizeof(BITMAPFILEHEADER), pbih, sizeof(BITMAPINFOHEADER) + pbih->biClrUsed * sizeof(RGBQUAD));
-	memcpy(pbResult + sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER) + pbih->biClrUsed * sizeof(RGBQUAD), lpBits, pbih->biSizeImage);
-
-	FILE* file = fopen(path.data(), "w+");
-	if (file)
+	for (UINT j = 0; j < num; ++j)
 	{
-		fwrite(pbResult, 1, total, file);
-		fclose(file);
+		if (!wcscmp(pImageCodecInfo[j].MimeType, format))
+		{
+			*pClsid = pImageCodecInfo[j].Clsid;
+			free(pImageCodecInfo);
+			return j;  
+		}
 	}
 
-	free(pbResult);
-	free(pbi);
-	free(lpBits);
+	free(pImageCodecInfo);
+	return 0;
 }
 
-void copyAsFile(HBITMAP hBitmap)
+void copyAsFile(HBITMAP hBitmap, bool png = false)
 {
-	string path = filesystem::temp_directory_path().string() + "/Screenshot.bmp";
+	Gdiplus::GdiplusStartupInput gdiplusStartupInput;
+	GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL);
+	Gdiplus::Bitmap bm(hBitmap, 0);
 
-	CreateBMPFile(CreateBitmapInfoStruct(hBitmap), hBitmap, path);
+	CLSID clsid;
+	string fileName;
 
-	int size = sizeof(DROPFILES) + ((lstrlenA(path.data()) + 2));
+	if (png)
+	{
+		GetEncoderClsid(L"image/png", &clsid);
+		fileName = filesystem::temp_directory_path().string() + "/Screenshot.png";
+	}
+	else
+	{
+		GetEncoderClsid(L"image/bmp", &clsid);
+		fileName = filesystem::temp_directory_path().string() + "/Screenshot.bmp";
+	}
+
+	wchar_t* fileNameW = a2w(fileName.data());
+	bm.Save(fileNameW, &clsid, NULL);
+	delete[] fileNameW;
+	
+	int size = sizeof(DROPFILES) + ((lstrlenA(fileName.data()) + 2));
 	HGLOBAL hGlobal = GlobalAlloc(GMEM_MOVEABLE, size);
 	if (!hGlobal)
 		return;
@@ -114,12 +82,13 @@ void copyAsFile(HBITMAP hBitmap)
 	df->pFiles = sizeof(DROPFILES);
 	df->fWide = FALSE;
 	LPSTR ptr = (LPSTR)(df + 1);
-	lstrcpyA(ptr, path.data());
+	lstrcpyA(ptr, fileName.data());
 	GlobalUnlock(hGlobal);
+	
 	SetClipboardData(CF_HDROP, hGlobal);
 }
 
-void copyToClipboard(bool isDesktop = true, int x = 0, int y = 0, int w = 0, int h = 0)
+void copyToClipboard(bool isDesktop = true, int x = 0, int y = 0, int w = 0, int h = 0, bool png = false)
 {
 	if (!w && !h)
 	{
@@ -151,14 +120,14 @@ void copyToClipboard(bool isDesktop = true, int x = 0, int y = 0, int w = 0, int
 	if (!oldbm)
 		return;
 
-	if (!BitBlt(memDC, x, y, w, h, hDC, 0, 0, SRCCOPY | CAPTUREBLT))
+	if (!BitBlt(memDC, 0, 0, w, h, hDC, x, y, SRCCOPY | CAPTUREBLT))
 		return;
 
 	OpenClipboard(NULL);
 	EmptyClipboard();
 	SetClipboardData(CF_BITMAP, bm);
 
-	copyAsFile(bm);
+	copyAsFile(bm, png);
 
 	CloseClipboard();
 
@@ -167,7 +136,9 @@ void copyToClipboard(bool isDesktop = true, int x = 0, int y = 0, int w = 0, int
 	DeleteObject(oldbm);
 	DeleteObject(bm);
 	DeleteDC(memDC);
-	ReleaseDC(hWnd, hDC);
+	ReleaseDC(hWnd, hDC); 
+
+	Gdiplus::GdiplusShutdown(gdiplusToken);
 }
 
 bool init()
@@ -177,8 +148,8 @@ bool init()
 		success = false;
 	else
 	{
-		copyToClipboard(true);
-		gWindow = SDL_CreateWindow("MagicShot", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 0, 0, SDL_WINDOW_SHOWN | SDL_WINDOW_ALWAYS_ON_TOP | SDL_WINDOW_FULLSCREEN_DESKTOP);
+		copyToClipboard();
+		gWindow = SDL_CreateWindow("MagicShot", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 800, 600, SDL_WINDOW_SHOWN); // | SDL_WINDOW_ALWAYS_ON_TOP | SDL_WINDOW_FULLSCREEN_DESKTOP);
 		if (!gWindow)
 			success = false;
 		else
@@ -190,9 +161,12 @@ bool init()
 
 void close()
 {
-	SDL_DestroyTexture(text);
-	SDL_DestroyRenderer(renderer);
-	SDL_FreeSurface(gScreenSurface);
+	if (text)
+		SDL_DestroyTexture(text);
+	if (renderer)
+		SDL_DestroyRenderer(renderer);
+	if (gScreenSurface)
+		SDL_FreeSurface(gScreenSurface);
 	SDL_Quit();
 }
 
@@ -219,6 +193,12 @@ bool pointAtHorizontalBorder(int y)
 
 void setCursor(int x, int y)
 {
+	if (!rect.w)
+	{
+		SDL_SetCursor(SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW));
+		return;
+	}
+
 	bool atV = pointAtVerticalBorder(x);
 	bool atH = pointAtHorizontalBorder(y);
 
@@ -251,9 +231,35 @@ void drawRectangle()
 	SDL_RenderClear(renderer);
 	SDL_RenderCopy(renderer, text, NULL, NULL);
 
-	SDL_SetRenderDrawColor(renderer, BORDER_COLOR);
-
 	SDL_Rect rectToFill;
+
+	SDL_SetRenderDrawColor(renderer, DARK_FILL_COLOR);
+
+	rectToFill.x = 0;
+	rectToFill.y = 0;
+	rectToFill.w = gScreenSurface->w;
+	rectToFill.h = rect.y;
+	SDL_RenderFillRect(renderer, &rectToFill);
+
+	rectToFill.x = 0;
+	rectToFill.y = rect.y + rect.h;
+	rectToFill.w = gScreenSurface->w;
+	rectToFill.h = gScreenSurface->h - rect.y - rect.h;
+	SDL_RenderFillRect(renderer, &rectToFill);
+
+	rectToFill.x = 0;
+	rectToFill.y = rect.y;
+	rectToFill.w = rect.x;
+	rectToFill.h = rect.h;
+	SDL_RenderFillRect(renderer, &rectToFill);
+
+	rectToFill.x = rect.x + rect.w;
+	rectToFill.y = rect.y;
+	rectToFill.w = gScreenSurface->w - rect.x - rect.w;
+	rectToFill.h = rect.h;
+	SDL_RenderFillRect(renderer, &rectToFill);
+
+	SDL_SetRenderDrawColor(renderer, BORDER_COLOR);
 
 	rectToFill.x = rect.x;
 	rectToFill.y = rect.y;
@@ -293,7 +299,7 @@ void handleEvent(SDL_Event* e)
 {
 	if (e->key.keysym.scancode == SDL_SCANCODE_C)
 	{
-		copyToClipboard(false, -BORDER_WIDTH - rect.x, -BORDER_WIDTH - rect.y, rect.x + rect.w - BORDER_WIDTH, rect.y + rect.h - BORDER_WIDTH);
+		copyToClipboard(false, rect.x + BORDER_WIDTH, rect.y + BORDER_WIDTH, rect.w - 2 * BORDER_WIDTH, rect.h - 2 * BORDER_WIDTH, true);
 		quit = true;
 	}
 
@@ -398,9 +404,17 @@ int main(int argc, char* args[])
 		SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
 
 		SDL_Surface* deskTop = SDL_LoadBMP((filesystem::temp_directory_path().string() + "/Screenshot.bmp").data());
-		text = SDL_CreateTextureFromSurface(renderer, deskTop);
-		SDL_RenderCopy(renderer, text, NULL, NULL);
-		SDL_RenderPresent(renderer);
+		if (renderer && deskTop)
+		{
+			text = SDL_CreateTextureFromSurface(renderer, deskTop);
+			SDL_RenderCopy(renderer, text, NULL, NULL);
+
+			SDL_SetRenderDrawColor(renderer, DARK_FILL_COLOR);
+			SDL_RenderFillRect(renderer, NULL);
+			SDL_RenderPresent(renderer);
+		}
+		else
+			quit = true;
 
 		SDL_Event e;
 		while (!quit)
