@@ -82,8 +82,8 @@ void copyAsFile(HBITMAP hBitmap, bool png = false)
 	df->fWide = FALSE;
 	LPSTR ptr = (LPSTR)(df + 1);
 	lstrcpyA(ptr, fileName.data());
+
 	GlobalUnlock(hGlobal);
-	
 	SetClipboardData(CF_HDROP, hGlobal);
 }
 
@@ -290,8 +290,6 @@ void drawRectangle()
 			SDL_RenderDrawPoint(renderer, p.x, p.y);
 
 	SDL_RenderPresent(renderer);
-
-	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 100);
 }
 
 void handleEvent(SDL_Event* e)
