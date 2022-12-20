@@ -80,8 +80,7 @@ void copyAsFile(HBITMAP hBitmap, bool png = false)
 	ZeroMemory(df, size);
 	df->pFiles = sizeof(DROPFILES);
 	df->fWide = FALSE;
-	LPSTR ptr = (LPSTR)(df + 1);
-	lstrcpyA(ptr, fileName.data());
+	lstrcpyA((LPSTR)(df + 1), fileName.data());
 
 	GlobalUnlock(hGlobal);
 	SetClipboardData(CF_HDROP, hGlobal);
