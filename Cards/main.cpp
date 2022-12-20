@@ -229,10 +229,9 @@ void drawRectangle()
 
 	SDL_RenderClear(renderer);
 	SDL_RenderCopy(renderer, text, NULL, NULL);
+	SDL_SetRenderDrawColor(renderer, DARK_FILL_COLOR);
 
 	SDL_Rect rectToFill;
-
-	SDL_SetRenderDrawColor(renderer, DARK_FILL_COLOR);
 
 	rectToFill.x = 0;
 	rectToFill.y = 0;
