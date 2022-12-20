@@ -165,7 +165,6 @@ void close()
 		SDL_DestroyRenderer(renderer);
 	if (gScreenSurface)
 		SDL_FreeSurface(gScreenSurface);
-	IMG_Quit();
 	SDL_Quit();
 }
 
@@ -381,21 +380,10 @@ void handleEvent(SDL_Event* e)
 	}
 }
 
-string getAppDir(char* arg)
-{
-	return filesystem::path(arg).parent_path().string();
-}
-
 int main(int argc, char* args[])
 {
 	if (init())
 	{
-		appDir = getAppDir(args[0]); 
-		
-		SDL_Surface* icon = IMG_Load((appDir + WINDOW_ICON).data());
-		if (icon)
-			SDL_SetWindowIcon(gWindow, icon);
-
 		renderer = SDL_CreateRenderer(gWindow, -1, SDL_RENDERER_ACCELERATED);
 		SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
 

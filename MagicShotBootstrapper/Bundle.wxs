@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi" xmlns:bal="http://schemas.microsoft.com/wix/BalExtension">
+	<Bundle Name="MagicShot" Version="1.0.0.0" Manufacturer="Andrey Kachamkin" UpgradeCode="5e844422-109d-4fc9-8b54-d28012ed0637">
+		<BootstrapperApplicationRef Id="WixStandardBootstrapperApplication.HyperlinkLargeLicense">
+			<bal:WixStandardBootstrapperApplication LicenseUrl=""/>
+		</BootstrapperApplicationRef>
+		<Chain>
+			<MsiPackage SourceFile="C:\Users\kacha\source\repos\MagicShot\MagicShotSetup\bin\Release\MagicShotSetup.msi" DisplayInternalUI="no" />
+		</Chain>
+	</Bundle>
+</Wix>

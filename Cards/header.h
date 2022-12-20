@@ -5,7 +5,6 @@
 #include <string>
 #include <filesystem>
 #include <SDL.h>
-#include <SDL_Image.h>
 #include <Windows.h>
 #include <Shlobj.h>
 #include <gdiplus.h>
@@ -31,8 +30,6 @@ SDL_Rect rect{0, 0, 0, 0};
 int initX = 0, initY = 0, prevX = 0, prevY = 0;
 
 bool quit = false;
-
-string appDir;
 
 vector<SDL_Point> pixels;
 ULONG_PTR gdiplusToken;
