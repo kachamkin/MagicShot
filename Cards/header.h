@@ -18,8 +18,6 @@ using namespace Gdiplus;
 #define SELECTION_COLOR 255, 0, 0, 255
 #define DARK_FILL_COLOR 10, 10, 10, 100
 #define SELECTION_WIDTH 3
-#define WINDOW_OPACITY 0.3
-#define WINDOW_ICON "/screenshot_icon.png"
 
 SDL_Window* gWindow = NULL;
 SDL_Surface* gScreenSurface = NULL;
