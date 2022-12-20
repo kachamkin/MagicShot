@@ -147,7 +147,8 @@ bool init()
 	else
 	{
 		copyToClipboard();
-		gWindow = SDL_CreateWindow("MagicShot", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 0, 0, SDL_WINDOW_SHOWN | SDL_WINDOW_ALWAYS_ON_TOP | SDL_WINDOW_FULLSCREEN_DESKTOP);
+		gWindow = SDL_CreateWindow("MagicShot", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 0, 0,
+			SDL_WINDOW_SHOWN | SDL_WINDOW_ALWAYS_ON_TOP | SDL_WINDOW_FULLSCREEN_DESKTOP);
 		if (!gWindow)
 			success = false;
 		else
@@ -202,9 +203,11 @@ void setCursor(int x, int y)
 
 	if (atV && atH)
 	{
-		if (x < rect.x + BORDER_WIDTH && x > rect.x && y < rect.y + BORDER_WIDTH && y > rect.y || x < rect.x + rect.w && x > rect.x + rect.w - BORDER_WIDTH && y < rect.y + rect.h && y > rect.y + rect.h - BORDER_WIDTH)
+		if (x < rect.x + BORDER_WIDTH && x > rect.x && y < rect.y + BORDER_WIDTH && y > rect.y ||
+			x < rect.x + rect.w && x > rect.x + rect.w - BORDER_WIDTH && y < rect.y + rect.h && y > rect.y + rect.h - BORDER_WIDTH)
 			SDL_SetCursor(SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZENWSE));
-		else if (x < rect.x + rect.w && x > rect.x + rect.w - BORDER_WIDTH && y < rect.y + BORDER_WIDTH && y > rect.y || x < rect.x + BORDER_WIDTH && x > rect.x && y < rect.y + rect.h && y > rect.y + rect.h - BORDER_WIDTH)
+		else if (x < rect.x + rect.w && x > rect.x + rect.w - BORDER_WIDTH && y < rect.y + BORDER_WIDTH && y > rect.y
+			|| x < rect.x + BORDER_WIDTH && x > rect.x && y < rect.y + rect.h && y > rect.y + rect.h - BORDER_WIDTH)
 			SDL_SetCursor(SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZENESW));
 		else
 			SDL_SetCursor(SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW));
@@ -222,6 +225,15 @@ void setCursor(int x, int y)
 		SDL_SetCursor(SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW));
 }
 
+void fillRect(SDL_Rect* rectToFill, int x, int y, int w, int h)
+{
+	rectToFill->x = x;
+	rectToFill->y = y;
+	rectToFill->w = w;
+	rectToFill->h = h;
+	SDL_RenderFillRect(renderer, rectToFill);
+}
+
 void drawRectangle()
 {
 	SDL_Rect newRect = getInnerRect();
@@ -232,55 +244,17 @@ void drawRectangle()
 
 	SDL_Rect rectToFill;
 
-	rectToFill.x = 0;
-	rectToFill.y = 0;
-	rectToFill.w = gScreenSurface->w;
-	rectToFill.h = rect.y;
-	SDL_RenderFillRect(renderer, &rectToFill);
-
-	rectToFill.x = 0;
-	rectToFill.y = rect.y + rect.h;
-	rectToFill.w = gScreenSurface->w;
-	rectToFill.h = gScreenSurface->h - rect.y - rect.h;
-	SDL_RenderFillRect(renderer, &rectToFill);
-
-	rectToFill.x = 0;
-	rectToFill.y = rect.y;
-	rectToFill.w = rect.x;
-	rectToFill.h = rect.h;
-	SDL_RenderFillRect(renderer, &rectToFill);
-
-	rectToFill.x = rect.x + rect.w;
-	rectToFill.y = rect.y;
-	rectToFill.w = gScreenSurface->w - rect.x - rect.w;
-	rectToFill.h = rect.h;
-	SDL_RenderFillRect(renderer, &rectToFill);
+	fillRect(&rectToFill, 0, 0, gScreenSurface->w, rect.y);
+	fillRect(&rectToFill, 0, rect.y + rect.h, gScreenSurface->w, gScreenSurface->h - rect.y - rect.h);
+	fillRect(&rectToFill, 0, rect.y, rect.x,  rect.h);
+	fillRect(&rectToFill, rect.x + rect.w, rect.y, gScreenSurface->w - rect.x - rect.w, rect.h);
 
 	SDL_SetRenderDrawColor(renderer, BORDER_COLOR);
 
-	rectToFill.x = rect.x;
-	rectToFill.y = rect.y;
-	rectToFill.w = rect.w;
-	rectToFill.h = BORDER_WIDTH;
-	SDL_RenderFillRect(renderer, &rectToFill);
-
-	rectToFill.x = rect.x;
-	rectToFill.y = rect.y + rect.h - BORDER_WIDTH;
-	rectToFill.w = rect.w;
-	rectToFill.h = BORDER_WIDTH;
-	SDL_RenderFillRect(renderer, &rectToFill);
-
-	rectToFill.x = rect.x;
-	rectToFill.y = rect.y + BORDER_WIDTH;
-	rectToFill.w = BORDER_WIDTH;
-	rectToFill.h = rect.h - 2 * BORDER_WIDTH;
-	SDL_RenderFillRect(renderer, &rectToFill);
-
-	rectToFill.x = rect.x + rect.w - BORDER_WIDTH;
-	rectToFill.y = rect.y + BORDER_WIDTH;
-	rectToFill.w = BORDER_WIDTH;
-	rectToFill.h = rect.h - 2 * BORDER_WIDTH;
-	SDL_RenderFillRect(renderer, &rectToFill);
+	fillRect(&rectToFill, rect.x, rect.y, rect.w, BORDER_WIDTH);
+	fillRect(&rectToFill, rect.x, rect.y + rect.h - BORDER_WIDTH, rect.w, BORDER_WIDTH);
+	fillRect(&rectToFill, rect.x, rect.y + BORDER_WIDTH, BORDER_WIDTH, rect.h - 2 * BORDER_WIDTH);
+	fillRect(&rectToFill, rect.x + rect.w - BORDER_WIDTH, rect.y + BORDER_WIDTH, BORDER_WIDTH, rect.h - 2 * BORDER_WIDTH);
 
 	SDL_SetRenderDrawColor(renderer, SELECTION_COLOR);
 	for (auto const& p : pixels)
