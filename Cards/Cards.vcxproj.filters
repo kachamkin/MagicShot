@@ -33,9 +33,6 @@
     </ResourceCompile>
   </ItemGroup>
   <ItemGroup>
-    <Image Include="icon1.ico">
-      <Filter>Файлы ресурсов</Filter>
-    </Image>
     <Image Include="..\..\..\..\Desktop\screenshot_icon.ico">
       <Filter>Файлы ресурсов</Filter>
     </Image>
