@@ -46,8 +46,6 @@ int GetEncoderClsid(const WCHAR* format, CLSID* pClsid)
 
 void copyAsFile(HBITMAP hBitmap, bool png = false)
 {
-	GdiplusStartupInput gdiplusStartupInput;
-	GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL);
 	Bitmap bm(hBitmap, 0);
 
 	CLSID clsid;
@@ -135,8 +133,6 @@ void copyToClipboard(bool isDesktop = true, int x = 0, int y = 0, int w = 0, int
 	DeleteObject(bm);
 	DeleteDC(memDC);
 	ReleaseDC(hWnd, hDC); 
-
-	GdiplusShutdown(gdiplusToken);
 }
 
 bool init()
@@ -146,6 +142,12 @@ bool init()
 		success = false;
 	else
 	{
+		int imgFlags = IMG_INIT_PNG;
+		if (!(IMG_Init(imgFlags) & imgFlags))
+			success = false;
+
+		GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL);
+		
 		copyToClipboard();
 		gWindow = SDL_CreateWindow("MagicShot", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 0, 0,
 			SDL_WINDOW_SHOWN | SDL_WINDOW_ALWAYS_ON_TOP | SDL_WINDOW_FULLSCREEN_DESKTOP);
@@ -160,12 +162,21 @@ bool init()
 
 void close()
 {
+	if (hdc)
+		ReleaseDC(NULL, hdc);
+	if (graphics)
+		delete graphics;
+
+	GdiplusShutdown(gdiplusToken);
+
 	if (text)
 		SDL_DestroyTexture(text);
 	if (renderer)
 		SDL_DestroyRenderer(renderer);
 	if (gScreenSurface)
 		SDL_FreeSurface(gScreenSurface);
+
+	IMG_Quit();
 	SDL_Quit();
 }
 
@@ -195,6 +206,13 @@ void setCursor(int x, int y)
 	if (!rect.w)
 	{
 		SDL_SetCursor(SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW));
+		return;
+	}
+
+	SDL_Point p(x, y);
+	if (SDL_PointInRect(&p, &buttonRect))
+	{
+		SDL_SetCursor(SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_HAND));
 		return;
 	}
 
@@ -261,6 +279,10 @@ void drawRectangle()
 		if (SDL_PointInRect(&p, &newRect))
 			SDL_RenderDrawPoint(renderer, p.x, p.y);
 
+	buttonRect.x = rect.x + rect.w + 10;
+	buttonRect.y = rect.y;
+	SDL_RenderCopy(renderer, pressed ? pressedButton : button, NULL, &buttonRect);
+
 	SDL_RenderPresent(renderer);
 }
 
@@ -279,6 +301,13 @@ void handleEvent(SDL_Event* e)
 	Uint32 state = SDL_GetMouseState(&x, &y);
 	SDL_Point p(x, y);
 	setCursor(x, y);
+
+	if (e->type == SDL_MOUSEBUTTONDOWN && rect.w && SDL_PointInRect(&p, &buttonRect))
+	{
+		pressed = !pressed;
+		drawRectangle();
+		return;
+	}
 
 	if (e->type == SDL_MOUSEBUTTONUP)
 	{
@@ -324,21 +353,39 @@ void handleEvent(SDL_Event* e)
 			SDL_Rect innerRect = getInnerRect();
 			if (SDL_PointInRect(&p, &rect))
 			{
-				SDL_SetRenderDrawColor(renderer, SELECTION_COLOR);
-				for (int i = 0; i < gScreenSurface->w; i++)
+				if (pressed && SDL_PointInRect(&p, &innerRect))
 				{
-					for (int j = 0; j < gScreenSurface->h; j++)
+					redRect.X = initX;
+					redRect.Y = initY;
+					redRect.Width = x > initX ? x - initX : initX - x;
+					redRect.Height = y > initY ? y - initY : initY - y;
+
+					SDL_RenderCopy(renderer, text, &innerRect, &innerRect);
+					SDL_RenderPresent(renderer);
+
+					Pen pen(Color::Red, SELECTION_BORDER);
+					graphics->DrawRectangle(&pen, redRect);
+
+					SDL_Delay(SDL_DELAY);
+				}
+				else
+				{
+					SDL_SetRenderDrawColor(renderer, SELECTION_COLOR);
+					for (int i = 0; i < gScreenSurface->w; i++)
 					{
-						SDL_Point pp(i, j);
-						if ((i - x) * (i - x) + (j - y) * (j - y) <= SELECTION_WIDTH * SELECTION_WIDTH && SDL_PointInRect(&pp, &innerRect))
+						for (int j = 0; j < gScreenSurface->h; j++)
 						{
-							SDL_RenderDrawPoint(renderer, i, j);
-							SDL_RenderPresent(renderer);
-							pixels.push_back(SDL_Point(i, j));
+							SDL_Point pp(i, j);
+							if ((i - x) * (i - x) + (j - y) * (j - y) <= SELECTION_WIDTH * SELECTION_WIDTH && SDL_PointInRect(&pp, &innerRect))
+							{
+								SDL_RenderDrawPoint(renderer, i, j);
+								SDL_RenderPresent(renderer);
+								pixels.push_back(SDL_Point(i, j));
+							}
 						}
 					}
+					SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
 				}
-				SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
 			}
 			else
 			{
@@ -354,10 +401,17 @@ void handleEvent(SDL_Event* e)
 	}
 }
 
+string getAppDir(char* arg)
+{
+	return filesystem::path(arg).parent_path().string();
+}
+
 int main(int argc, char* args[])
 {
 	if (init())
 	{
+		appPath = getAppDir(args[0]);
+
 		renderer = SDL_CreateRenderer(gWindow, -1, SDL_RENDERER_ACCELERATED);
 		SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
 
@@ -367,9 +421,16 @@ int main(int argc, char* args[])
 			text = SDL_CreateTextureFromSurface(renderer, deskTop);
 			SDL_RenderCopy(renderer, text, NULL, NULL);
 
+			button = SDL_CreateTextureFromSurface(renderer, IMG_Load((appPath + BUTTON_PATH).data()));
+			pressedButton = SDL_CreateTextureFromSurface(renderer, IMG_Load((appPath + PRESSED_PATH).data()));
+
 			SDL_SetRenderDrawColor(renderer, DARK_FILL_COLOR);
 			SDL_RenderFillRect(renderer, NULL);
 			SDL_RenderPresent(renderer);
+
+			hdc = GetDC(NULL);
+			if (hdc)
+				graphics = new Graphics(hdc);
 		}
 		else
 			quit = true;
