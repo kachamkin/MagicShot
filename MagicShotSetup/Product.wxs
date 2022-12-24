@@ -48,6 +48,9 @@
 				<Shortcut Id="programMenuSignTool" Directory="ProgramMenuDir" Name="MagicShot" WorkingDirectory='INSTALLFOLDER' Advertise="yes" Icon= "MagicShot.exe"/>
 			</File>
 			<File Id='SDL2.dll' Name='SDL2.dll' Source='C:\Users\kacha\source\repos\MagicShot\x64\Release\SDL2.dll'/>
+			<File Id='SDL2_image.dll' Name='SDL2_image.dll' Source='C:\Users\kacha\source\repos\MagicShot\x64\Release\SDL2_image.dll'/>
+			<File Id='rect.png' Name='rect.png' Source='C:\Users\kacha\source\repos\MagicShot\x64\Release\rect.png'/>
+			<File Id='pressed.png' Name='pressed.png' Source='C:\Users\kacha\source\repos\MagicShot\x64\Release\pressed.png'/>
 		</Component>
 		</ComponentGroup>
 	</Fragment>

@@ -360,6 +360,11 @@ void handleEvent(SDL_Event* e)
 					redRect.Width = x > initX ? x - initX : initX - x;
 					redRect.Height = y > initY ? y - initY : initY - y;
 
+					if (redRect.X + redRect.Width > innerRect.x + innerRect.w)
+						redRect.Width = innerRect.x + innerRect.w - redRect.X;
+					if (redRect.Y + redRect.Height > innerRect.y + innerRect.h)
+						redRect.Height = innerRect.y + innerRect.h - redRect.Y;
+
 					SDL_RenderCopy(renderer, text, &innerRect, &innerRect);
 					SDL_RenderPresent(renderer);
 
