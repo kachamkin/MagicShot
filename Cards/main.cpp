@@ -286,37 +286,119 @@ void drawRectangle()
 	SDL_RenderPresent(renderer);
 }
 
-void handleEvent(SDL_Event* e)
+void drawGDIRect(SDL_Rect innerRect, int x, int y)
+{
+	selectionExists = true;
+
+	redRect.X = initX;
+	redRect.Y = initY;
+	redRect.Width = x > initX ? x - initX : initX - x;
+	redRect.Height = y > initY ? y - initY : initY - y;
+
+	if (redRect.X + redRect.Width > innerRect.x + innerRect.w)
+		redRect.Width = innerRect.x + innerRect.w - redRect.X;
+	if (redRect.Y + redRect.Height > innerRect.y + innerRect.h)
+		redRect.Height = innerRect.y + innerRect.h - redRect.Y;
+
+	SDL_RenderCopy(renderer, text, &innerRect, &innerRect);
+	SDL_RenderPresent(renderer);
+
+	Pen pen(Color::Red, SELECTION_BORDER);
+	graphics->DrawRectangle(&pen, redRect);
+
+	SDL_Delay(SDL_DELAY);
+}
+
+void drawSelectionPath(SDL_Rect innerRect, int x, int y)
+{
+	SDL_SetRenderDrawColor(renderer, SELECTION_COLOR);
+	for (int i = 0; i < gScreenSurface->w; i++)
+	{
+		for (int j = 0; j < gScreenSurface->h; j++)
+		{
+			SDL_Point pp(i, j);
+			if ((i - x) * (i - x) + (j - y) * (j - y) <= SELECTION_WIDTH * SELECTION_WIDTH && SDL_PointInRect(&pp, &innerRect))
+			{
+				SDL_RenderDrawPoint(renderer, i, j);
+				SDL_RenderPresent(renderer);
+				pixels.push_back(SDL_Point(i, j));
+			}
+		}
+	}
+	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
+}
+
+void keyCopy(SDL_Event* e)
 {
 	if (e->key.keysym.scancode == SDL_SCANCODE_C)
 	{
 		copyToClipboard(false, rect.x + BORDER_WIDTH, rect.y + BORDER_WIDTH, rect.w - 2 * BORDER_WIDTH, rect.h - 2 * BORDER_WIDTH, true);
-		quit = true;
+		close();
+		exit(0);
 	}
+}
 
-	if (e->key.keysym.scancode == SDL_SCANCODE_ESCAPE)
-		quit = true;
-	
-	int x, y;
-	Uint32 state = SDL_GetMouseState(&x, &y);
-	SDL_Point p(x, y);
-	setCursor(x, y);
+bool keyEscape(SDL_Event* e)
+{
+	if (e->key.keysym.scancode == SDL_SCANCODE_ESCAPE && !e->key.state == 1)
+	{
+		if (selectionExists)
+		{
+			selectionExists = false;
+			drawRectangle();
+		}
+		else
+		{
+			close();
+			exit(0);
+		}
+		return true;
+	}
+	return false;
+}
 
-	if (e->type == SDL_MOUSEBUTTONDOWN && rect.w && SDL_PointInRect(&p, &buttonRect))
+bool mouseDownInButton(SDL_Event* e, SDL_Point* p)
+{
+	if (e->type == SDL_MOUSEBUTTONDOWN && rect.w && SDL_PointInRect(p, &buttonRect))
 	{
 		pressed = !pressed;
+		if (!pressed)
+			selectionExists = false;
 		drawRectangle();
-		return;
+		return true;
 	}
+	return false;
+}
 
+void mouseUp(SDL_Event* e)
+{
 	if (e->type == SDL_MOUSEBUTTONUP)
 	{
 		initX = 0;
 		initY = 0;
 	}
+}
 
-	if (e->type == SDL_MOUSEBUTTONDOWN && !SDL_PointInRect(&p, &rect))
+void mouseDownOutside(SDL_Event* e, SDL_Point* p)
+{
+	if (e->type == SDL_MOUSEBUTTONDOWN && !SDL_PointInRect(p, &rect))
 		pixels.clear();
+}
+
+void handleEvent(SDL_Event* e)
+{
+	int x, y;
+	Uint32 state = SDL_GetMouseState(&x, &y);
+	SDL_Point p(x, y);
+	setCursor(x, y);
+	
+	keyCopy(e);
+	if (keyEscape(e))
+		return;
+	if (mouseDownInButton(e, &p))
+		return;
+	mouseUp(e);
+	mouseDownOutside(e, &p);
 
 	if (e->type == SDL_MOUSEMOTION)
 	{
@@ -354,43 +436,9 @@ void handleEvent(SDL_Event* e)
 			if (SDL_PointInRect(&p, &rect))
 			{
 				if (pressed && SDL_PointInRect(&p, &innerRect))
-				{
-					redRect.X = initX;
-					redRect.Y = initY;
-					redRect.Width = x > initX ? x - initX : initX - x;
-					redRect.Height = y > initY ? y - initY : initY - y;
-
-					if (redRect.X + redRect.Width > innerRect.x + innerRect.w)
-						redRect.Width = innerRect.x + innerRect.w - redRect.X;
-					if (redRect.Y + redRect.Height > innerRect.y + innerRect.h)
-						redRect.Height = innerRect.y + innerRect.h - redRect.Y;
-
-					SDL_RenderCopy(renderer, text, &innerRect, &innerRect);
-					SDL_RenderPresent(renderer);
-
-					Pen pen(Color::Red, SELECTION_BORDER);
-					graphics->DrawRectangle(&pen, redRect);
-
-					SDL_Delay(SDL_DELAY);
-				}
+					drawGDIRect(innerRect, x, y);
 				else
-				{
-					SDL_SetRenderDrawColor(renderer, SELECTION_COLOR);
-					for (int i = 0; i < gScreenSurface->w; i++)
-					{
-						for (int j = 0; j < gScreenSurface->h; j++)
-						{
-							SDL_Point pp(i, j);
-							if ((i - x) * (i - x) + (j - y) * (j - y) <= SELECTION_WIDTH * SELECTION_WIDTH && SDL_PointInRect(&pp, &innerRect))
-							{
-								SDL_RenderDrawPoint(renderer, i, j);
-								SDL_RenderPresent(renderer);
-								pixels.push_back(SDL_Point(i, j));
-							}
-						}
-					}
-					SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
-				}
+					drawSelectionPath(innerRect, x, y);
 			}
 			else
 			{
@@ -438,22 +486,23 @@ int main(int argc, char* args[])
 				graphics = new Graphics(hdc);
 		}
 		else
-			quit = true;
+		{
+			close();
+			return 0;
+		}
 
 		SDL_Event e;
-		while (!quit)
+		while (SDL_WaitEvent(&e))
 		{
-			SDL_WaitEventTimeout(NULL, EVENT_TIMEOUT);
-			while (SDL_PollEvent(&e))
+			if (e.type == SDL_QUIT)
 			{
-				if (e.type == SDL_QUIT)
-					quit = true;
-				handleEvent(&e);
+				close();
+				return 0;
 			}
+			handleEvent(&e);
 		}
 	}
 
 	close();
-
 	return 0;
 }

@@ -25,6 +25,7 @@ using namespace Gdiplus;
 #define PRESSED_PATH "/pressed.png"
 
 bool pressed = false;
+bool selectionExists = false;
 
 SDL_Window* gWindow = NULL;
 SDL_Surface* gScreenSurface = NULL;
