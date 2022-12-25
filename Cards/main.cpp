@@ -252,6 +252,26 @@ void fillRect(SDL_Rect* rectToFill, int x, int y, int w, int h)
 	SDL_RenderFillRect(renderer, rectToFill);
 }
 
+void resizeRedRect(SDL_Rect innerRect)
+{
+	if (redRect.X + redRect.Width > innerRect.x + innerRect.w)
+		redRect.Width = innerRect.x + innerRect.w - redRect.X;
+	if (redRect.X < innerRect.x)
+		redRect.X = innerRect.x;
+	if (redRect.Y + redRect.Height > innerRect.y + innerRect.h)
+		redRect.Height = innerRect.y + innerRect.h - redRect.Y;
+	if (redRect.Y < innerRect.y)
+		redRect.Y = innerRect.y;
+
+	SDL_RenderCopy(renderer, text, &innerRect, &innerRect);
+	SDL_RenderPresent(renderer);
+
+	Pen pen(Color::Red, SELECTION_BORDER);
+	graphics->DrawRectangle(&pen, redRect);
+
+	SDL_Delay(SDL_DELAY);
+}
+
 void drawRectangle()
 {
 	SDL_Rect newRect = getInnerRect();
@@ -284,6 +304,12 @@ void drawRectangle()
 	SDL_RenderCopy(renderer, pressed ? pressedButton : button, NULL, &buttonRect);
 
 	SDL_RenderPresent(renderer);
+
+	SDL_Rect innerRect = getInnerRect();
+	SDL_RenderCopy(renderer, text, &innerRect, &innerRect);
+	SDL_RenderPresent(renderer);
+
+	resizeRedRect(innerRect);
 }
 
 void drawGDIRect(SDL_Rect innerRect, int x, int y)
@@ -295,18 +321,7 @@ void drawGDIRect(SDL_Rect innerRect, int x, int y)
 	redRect.Width = x > initX ? x - initX : initX - x;
 	redRect.Height = y > initY ? y - initY : initY - y;
 
-	if (redRect.X + redRect.Width > innerRect.x + innerRect.w)
-		redRect.Width = innerRect.x + innerRect.w - redRect.X;
-	if (redRect.Y + redRect.Height > innerRect.y + innerRect.h)
-		redRect.Height = innerRect.y + innerRect.h - redRect.Y;
-
-	SDL_RenderCopy(renderer, text, &innerRect, &innerRect);
-	SDL_RenderPresent(renderer);
-
-	Pen pen(Color::Red, SELECTION_BORDER);
-	graphics->DrawRectangle(&pen, redRect);
-
-	SDL_Delay(SDL_DELAY);
+	resizeRedRect(innerRect);
 }
 
 void drawSelectionPath(SDL_Rect innerRect, int x, int y)
@@ -345,7 +360,7 @@ bool keyEscape(SDL_Event* e)
 		if (selectionExists)
 		{
 			selectionExists = false;
-			drawRectangle();
+			SDL_RenderPresent(renderer);
 		}
 		else
 		{

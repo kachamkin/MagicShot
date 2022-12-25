@@ -38,8 +38,6 @@ SDL_Rect buttonRect{ 0, 0, 32, 32 };
 
 int initX = 0, initY = 0, prevX = 0, prevY = 0;
 
-bool quit = false;
-
 string appPath;
 vector<SDL_Point> pixels;
 
