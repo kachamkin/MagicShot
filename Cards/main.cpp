@@ -175,6 +175,8 @@ void close()
 		SDL_DestroyRenderer(renderer);
 	if (gScreenSurface)
 		SDL_FreeSurface(gScreenSurface);
+	if (gWindow)
+		SDL_DestroyWindow(gWindow);
 
 	IMG_Quit();
 	SDL_Quit();
