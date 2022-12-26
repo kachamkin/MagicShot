@@ -219,25 +219,30 @@ void setCursor(int x, int y)
 	bool atV = pointAtVerticalBorder(x);
 	bool atH = pointAtHorizontalBorder(y);
 
-	if (atV && atH)
+	if (SDL_PointInRect(&p, &rect))
 	{
-		if (x < rect.x + BORDER_WIDTH && x > rect.x && y < rect.y + BORDER_WIDTH && y > rect.y ||
-			x < rect.x + rect.w && x > rect.x + rect.w - BORDER_WIDTH && y < rect.y + rect.h && y > rect.y + rect.h - BORDER_WIDTH)
-			SDL_SetCursor(SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZENWSE));
-		else if (x < rect.x + rect.w && x > rect.x + rect.w - BORDER_WIDTH && y < rect.y + BORDER_WIDTH && y > rect.y
-			|| x < rect.x + BORDER_WIDTH && x > rect.x && y < rect.y + rect.h && y > rect.y + rect.h - BORDER_WIDTH)
-			SDL_SetCursor(SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZENESW));
+		if (atV && atH)
+		{
+			if (x < rect.x + BORDER_WIDTH && x > rect.x && y < rect.y + BORDER_WIDTH && y > rect.y ||
+				x < rect.x + rect.w && x > rect.x + rect.w - BORDER_WIDTH && y < rect.y + rect.h && y > rect.y + rect.h - BORDER_WIDTH)
+				SDL_SetCursor(SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZENWSE));
+			else if (x < rect.x + rect.w && x > rect.x + rect.w - BORDER_WIDTH && y < rect.y + BORDER_WIDTH && y > rect.y
+				|| x < rect.x + BORDER_WIDTH && x > rect.x && y < rect.y + rect.h && y > rect.y + rect.h - BORDER_WIDTH)
+				SDL_SetCursor(SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZENESW));
+			else
+				SDL_SetCursor(SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW));
+			return;
+		}
+
+		if (atV || atH)
+		{
+			if (atV)
+				SDL_SetCursor(SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZEWE));
+			if (atH)
+				SDL_SetCursor(SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZENS));
+		}
 		else
 			SDL_SetCursor(SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW));
-		return;
-	}
-
-	if (atV || atH)
-	{
-		if (atV)
-			SDL_SetCursor(SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZEWE));
-		if (atH)
-			SDL_SetCursor(SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZENS));
 	}
 	else
 		SDL_SetCursor(SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW));
