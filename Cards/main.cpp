@@ -84,7 +84,7 @@ void copyAsFile(HBITMAP hBitmap, bool png = false)
 	SetClipboardData(CF_HDROP, hGlobal);
 }
 
-void copyToClipboard(bool isDesktop = true, int x = 0, int y = 0, int w = 0, int h = 0, bool png = false)
+void copyToClipboard(bool isDesktop = true, int x = 0, int y = 0, int w = 0, int h = 0, bool png = false, bool toFile = true)
 {
 	if (!w && !h)
 	{
@@ -123,7 +123,8 @@ void copyToClipboard(bool isDesktop = true, int x = 0, int y = 0, int w = 0, int
 	EmptyClipboard();
 	SetClipboardData(CF_BITMAP, bm);
 
-	copyAsFile(bm, png);
+	if (toFile)
+		copyAsFile(bm, png);
 
 	CloseClipboard();
 
@@ -352,9 +353,9 @@ void drawSelectionPath(SDL_Rect innerRect, int x, int y)
 
 void keyCopy(SDL_Event* e)
 {
-	if (e->key.keysym.scancode == SDL_SCANCODE_C)
+	if (e->key.keysym.scancode == SDL_SCANCODE_C || e->key.keysym.scancode == SDL_SCANCODE_F)
 	{
-		copyToClipboard(false, rect.x + BORDER_WIDTH, rect.y + BORDER_WIDTH, rect.w - 2 * BORDER_WIDTH, rect.h - 2 * BORDER_WIDTH, true);
+		copyToClipboard(false, rect.x + BORDER_WIDTH, rect.y + BORDER_WIDTH, rect.w - 2 * BORDER_WIDTH, rect.h - 2 * BORDER_WIDTH, true, e->key.keysym.scancode == SDL_SCANCODE_F);
 		close();
 		exit(0);
 	}
